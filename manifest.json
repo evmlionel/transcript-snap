@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Transcript Copier",
+  "version": "1.0",
+  "description": "Automatically open and copy YouTube transcripts without timestamps",
+  "permissions": ["activeTab", "clipboardWrite"],
+  "content_scripts": [
+    {
+      "matches": ["*://www.youtube.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  }
+}

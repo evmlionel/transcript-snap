@@ -1,0 +1,33 @@
+# Python script for resizing icons
+resize_icons.py
+
+# Instructions for using the Python script
+pythonScriptHowTo.txt
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+*.venv
+env/
+*.env
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
