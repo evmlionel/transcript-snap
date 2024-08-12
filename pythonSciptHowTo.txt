@@ -1,1 +1,0 @@
-python resize_icons.py your_icon.png icon
