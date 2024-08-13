@@ -14,48 +14,51 @@ class YouTubeTranscriptCopier {
     this.createButton();
     this.createSettingsPanel();
     this.observeThemeChanges();
+    this.observeFullScreenChanges();
   }
 
   createStyles() {
     const style = document.createElement('style');
     style.textContent = `
       .yt-transcript-copier-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 9999;
-        padding: 10px 16px;
-        background-color: var(--yt-spec-brand-button-background);
-        color: var(--yt-spec-static-brand-white);
+        position: absolute;
+        bottom: 60px;
+        right: 12px;
+        z-index: 60;
+        padding: 8px 12px;
+        background-color: rgba(0, 0, 0, 0.6);
+        color: white;
         border: none;
-        border-radius: 18px;
+        border-radius: 2px;
         cursor: pointer;
         font-family: Roboto, Arial, sans-serif;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
         transition: all 0.2s;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        opacity: 0.7;
       }
       .yt-transcript-copier-btn:hover {
-        background-color: var(--yt-spec-brand-button-background-hover);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        opacity: 1;
+        background-color: rgba(0, 0, 0, 0.8);
+      }
+      .ytp-fullscreen .yt-transcript-copier-btn {
+        display: none;
       }
       .yt-transcript-copier-settings {
-        position: fixed;
-        bottom: 70px;
-        right: 20px;
-        background-color: var(--yt-spec-brand-background-primary);
-        border-radius: 8px;
-        padding: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        z-index: 9998;
+        position: absolute;
+        bottom: 100px;
+        right: 12px;
+        background-color: rgba(0, 0, 0, 0.8);
+        border-radius: 2px;
+        padding: 8px;
+        z-index: 60;
         display: none;
       }
       .yt-transcript-copier-settings label {
         display: block;
         margin-bottom: 5px;
-        color: var(--yt-spec-text-primary);
+        color: white;
+        font-size: 13px;
       }
       .yt-transcript-copier-notification {
         position: fixed;
@@ -77,7 +80,16 @@ class YouTubeTranscriptCopier {
     this.button.textContent = 'Copy Transcript';
     this.button.className = 'yt-transcript-copier-btn';
     this.button.addEventListener('click', () => this.handleButtonClick());
-    document.body.appendChild(this.button);
+    this.addButtonToPlayer();
+  }
+
+  addButtonToPlayer() {
+    const playerContainer = document.querySelector('#movie_player');
+    if (playerContainer) {
+      playerContainer.appendChild(this.button);
+    } else {
+      setTimeout(() => this.addButtonToPlayer(), 1000); // Retry after 1 second if player not found
+    }
   }
 
   createSettingsPanel() {
@@ -114,14 +126,18 @@ class YouTubeTranscriptCopier {
     observer.observe(document.documentElement, { attributes: true });
   }
 
+  observeFullScreenChanges() {
+    document.addEventListener('fullscreenchange', () => {
+      if (document.fullscreenElement) {
+        this.button.style.display = 'none';
+      } else {
+        this.button.style.display = 'block';
+      }
+    });
+  }
+
   updateButtonStyle() {
-    if (this.settings.darkMode) {
-      this.button.style.backgroundColor = '#3ea6ff';
-      this.button.style.color = '#0f0f0f';
-    } else {
-      this.button.style.backgroundColor = '';
-      this.button.style.color = '';
-    }
+    // Button style is now consistent across themes
   }
 
   handleButtonClick() {
