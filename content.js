@@ -73,7 +73,7 @@ class YouTubeTranscriptCopier {
     this.button = document.createElement('button')
     this.button.textContent = 'Copy Transcript'
     this.button.className = 'yt-transcript-copier-btn'
-    this.button.addEventListener('click', () => this.handleButtonClick())
+    this.button.addEventListener('click', this.handleButtonClick.bind(this))
     this.addButtonToPlayer()
   }
 
@@ -135,7 +135,7 @@ class YouTubeTranscriptCopier {
 
   handleButtonClick() {
     this.openTranscript()
-    setTimeout(() => this.extractAndCopyTranscript(), 1000)
+    this.waitForTranscript()
   }
 
   openTranscript() {
@@ -145,6 +145,29 @@ class YouTubeTranscriptCopier {
     if (showTranscriptButton) {
       showTranscriptButton.click()
     }
+  }
+
+  waitForTranscript() {
+    const observer = new MutationObserver((mutations, obs) => {
+      const transcriptItems = document.querySelectorAll(
+        'yt-formatted-string.ytd-transcript-segment-renderer'
+      )
+      if (transcriptItems.length > 0) {
+        obs.disconnect()
+        this.extractAndCopyTranscript()
+      }
+    })
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    })
+
+    // Fallback timeout
+    setTimeout(() => {
+      observer.disconnect()
+      this.extractAndCopyTranscript()
+    }, 3000)
   }
 
   extractAndCopyTranscript() {
@@ -180,17 +203,19 @@ class YouTubeTranscriptCopier {
   }
 
   showNotification(message, type) {
-    const notification = document.createElement('div')
-    notification.textContent = message
-    notification.className = 'yt-transcript-copier-notification'
-    notification.style.backgroundColor =
-      type === 'success' ? '#43a047' : '#d32f2f'
-    document.body.appendChild(notification)
+    requestAnimationFrame(() => {
+      const notification = document.createElement('div')
+      notification.textContent = message
+      notification.className = 'yt-transcript-copier-notification'
+      notification.style.backgroundColor =
+        type === 'success' ? '#43a047' : '#d32f2f'
+      document.body.appendChild(notification)
 
-    setTimeout(() => {
-      notification.style.opacity = '0'
-      setTimeout(() => notification.remove(), 500)
-    }, 3000)
+      setTimeout(() => {
+        notification.style.opacity = '0'
+        setTimeout(() => notification.remove(), 500)
+      }, 3000)
+    })
   }
 }
 
