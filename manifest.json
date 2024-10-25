@@ -3,7 +3,7 @@
   "name": "YouTube Transcript Copier",
   "version": "1.0",
   "description": "Automatically open and copy YouTube transcripts without timestamps",
-  "permissions": ["activeTab", "clipboardWrite"],
+  "permissions": ["activeTab", "clipboardWrite", "scripting"],
   "host_permissions": ["*://*.youtube.com/*"],
   "content_scripts": [
     {

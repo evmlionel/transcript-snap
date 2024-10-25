@@ -3,8 +3,9 @@ class YouTubeTranscriptCopier {
   constructor() {
     // Cache DOM elements
     this.cachedElements = new Map()
+    this.observers = new Set() // Ensure this is initialized before calling init()
+    this.settings = { includeTimestamps: false, darkMode: false } // Initialize settings
     this.init()
-    this.observers = new Set()
   }
 
   // Optimized DOM element getter
@@ -219,13 +220,36 @@ class YouTubeTranscriptCopier {
         .filter(Boolean)
         .join('\n')
 
-      navigator.clipboard.writeText(text)
-      this.showSuccess()
+      // Try modern clipboard API first
+      navigator.clipboard.writeText(text).then(
+        () => this.showSuccess(),
+        () => {
+          // Fallback to execCommand
+          const textArea = document.createElement('textarea')
+          textArea.value = text
+          textArea.style.position = 'fixed'
+          textArea.style.opacity = '0'
+          document.body.appendChild(textArea)
+          textArea.select()
+
+          try {
+            const success = document.execCommand('copy')
+            if (success) {
+              this.showSuccess()
+            } else {
+              throw new Error('execCommand failed')
+            }
+          } catch (err) {
+            console.error('Fallback clipboard method failed:', err)
+            this.showError()
+          } finally {
+            document.body.removeChild(textArea)
+          }
+        }
+      )
     } catch (error) {
       console.error('Transcript extraction failed:', error)
       this.showError()
-      // Retry once after error
-      setTimeout(() => this.extractAndCopyTranscript(), 1000)
     }
   }
 
@@ -264,8 +288,11 @@ class YouTubeTranscriptCopier {
   }
 
   debounce(func, wait) {
-    clearTimeout(this.debounceTimeout)
-    this.debounceTimeout = setTimeout(func, wait)
+    let timeout
+    return function (...args) {
+      clearTimeout(timeout)
+      timeout = setTimeout(() => func.apply(this, args), wait)
+    }
   }
 
   showSuccess() {
@@ -293,7 +320,11 @@ class YouTubeTranscriptCopier {
   }
 
   addObserver(observer) {
-    this.observers.add(observer)
+    if (this.observers) {
+      this.observers.add(observer)
+    } else {
+      console.error('Observers set is not initialized')
+    }
   }
 }
 
