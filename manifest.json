@@ -4,10 +4,12 @@
   "version": "1.0",
   "description": "Automatically open and copy YouTube transcripts without timestamps",
   "permissions": ["activeTab", "clipboardWrite"],
+  "host_permissions": ["*://*.youtube.com/*"],
   "content_scripts": [
     {
-      "matches": ["*://www.youtube.com/*"],
-      "js": ["content.js"]
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
     }
   ],
   "action": {

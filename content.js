@@ -15,6 +15,7 @@ class YouTubeTranscriptCopier {
     this.createSettingsPanel()
     this.observeThemeChanges()
     this.observeFullScreenChanges()
+    this.observeNavigation()
   }
 
   createStyles() {
@@ -80,9 +81,14 @@ class YouTubeTranscriptCopier {
   addButtonToPlayer() {
     const playerContainer = document.querySelector('#movie_player')
     if (playerContainer) {
+      // Remove existing button if present
+      const existingButton = document.querySelector('.yt-transcript-copier-btn')
+      if (existingButton) {
+        existingButton.remove()
+      }
       playerContainer.appendChild(this.button)
     } else {
-      setTimeout(() => this.addButtonToPlayer(), 1000) // Retry after 1 second if player not found
+      setTimeout(() => this.addButtonToPlayer(), 1000)
     }
   }
 
@@ -217,9 +223,34 @@ class YouTubeTranscriptCopier {
       }, 3000)
     })
   }
+
+  observeNavigation() {
+    const observer = new MutationObserver((mutations) => {
+      if (window.location.pathname === '/watch') {
+        this.addButtonToPlayer()
+      }
+    })
+
+    observer.observe(document.querySelector('title'), {
+      subtree: true,
+      characterData: true,
+      childList: true,
+    })
+  }
 }
 
 // Initialize the copier when the page is loaded
-window.addEventListener('load', () => {
-  new YouTubeTranscriptCopier()
-})
+function initializeExtension() {
+  if (document.querySelector('#movie_player')) {
+    new YouTubeTranscriptCopier()
+  } else {
+    setTimeout(initializeExtension, 1000)
+  }
+}
+
+// Start checking as soon as possible
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeExtension)
+} else {
+  initializeExtension()
+}
