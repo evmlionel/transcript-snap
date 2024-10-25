@@ -1,12 +1,23 @@
 // Main class for the YouTube Transcript Copier
 class YouTubeTranscriptCopier {
   constructor() {
-    this.button = null
-    this.settings = {
-      includeTimestamps: false,
-      darkMode: false,
-    }
+    // Cache DOM elements
+    this.cachedElements = new Map()
     this.init()
+    this.observers = new Set()
+  }
+
+  // Optimized DOM element getter
+  getElement(selector) {
+    if (!this.cachedElements.has(selector)) {
+      this.cachedElements.set(selector, document.querySelector(selector))
+    }
+    return this.cachedElements.get(selector)
+  }
+
+  // Clear cache on navigation
+  clearCache() {
+    this.cachedElements.clear()
   }
 
   init() {
@@ -154,58 +165,68 @@ class YouTubeTranscriptCopier {
   }
 
   waitForTranscript() {
+    const selectors = [
+      'yt-formatted-string.ytd-transcript-segment-renderer',
+      '.ytd-transcript-segment-renderer',
+      '[class*="transcript-segment"]', // Fallback
+    ]
+
     const observer = new MutationObserver((mutations, obs) => {
-      const transcriptItems = document.querySelectorAll(
-        'yt-formatted-string.ytd-transcript-segment-renderer'
-      )
-      if (transcriptItems.length > 0) {
+      let transcriptItems
+      for (const selector of selectors) {
+        transcriptItems = document.querySelectorAll(selector)
+        if (transcriptItems.length > 0) break
+      }
+
+      if (transcriptItems?.length > 0) {
         obs.disconnect()
         this.extractAndCopyTranscript()
       }
     })
 
+    // Optimize observer config
     observer.observe(document.body, {
       childList: true,
       subtree: true,
+      attributes: false,
+      characterData: false,
     })
 
-    // Fallback timeout
-    setTimeout(() => {
-      observer.disconnect()
-      this.extractAndCopyTranscript()
-    }, 3000)
+    // Add progressive timeout with retries
+    let attempts = 0
+    const maxAttempts = 3
+    const tryExtract = () => {
+      if (attempts++ < maxAttempts) {
+        this.extractAndCopyTranscript()
+        setTimeout(tryExtract, 1000 * attempts)
+      }
+    }
+    setTimeout(tryExtract, 3000)
   }
 
   extractAndCopyTranscript() {
-    const transcriptItems = document.querySelectorAll(
-      'yt-formatted-string.ytd-transcript-segment-renderer'
-    )
-    if (transcriptItems.length === 0) {
-      this.showNotification('No transcript found for this video.', 'error')
-      return
+    try {
+      const transcriptItems = document.querySelectorAll(
+        'yt-formatted-string.ytd-transcript-segment-renderer'
+      )
+
+      if (!transcriptItems.length) {
+        throw new Error('No transcript items found')
+      }
+
+      const text = Array.from(transcriptItems)
+        .map((item) => item.textContent.trim())
+        .filter(Boolean)
+        .join('\n')
+
+      navigator.clipboard.writeText(text)
+      this.showSuccess()
+    } catch (error) {
+      console.error('Transcript extraction failed:', error)
+      this.showError()
+      // Retry once after error
+      setTimeout(() => this.extractAndCopyTranscript(), 1000)
     }
-
-    const transcriptText = Array.from(transcriptItems)
-      .reduce((acc, item, index) => {
-        // Always include the first item (0:00 timestamp)
-        if (index === 0 || this.settings.includeTimestamps || index % 2 === 1) {
-          acc.push(item.textContent.trim())
-        }
-        return acc
-      }, [])
-      .join(this.settings.includeTimestamps ? '\n' : ' ')
-
-    navigator.clipboard
-      .writeText(transcriptText)
-      .then(() =>
-        this.showNotification('Transcript copied to clipboard!', 'success')
-      )
-      .catch((err) =>
-        this.showNotification(
-          'Failed to copy transcript. Please try again.',
-          'error'
-        )
-      )
   }
 
   showNotification(message, type) {
@@ -225,24 +246,67 @@ class YouTubeTranscriptCopier {
   }
 
   observeNavigation() {
-    const observer = new MutationObserver((mutations) => {
-      if (window.location.pathname === '/watch') {
-        this.addButtonToPlayer()
-      }
-    })
+    const observer = new MutationObserver(
+      this.debounce(() => {
+        if (window.location.pathname === '/watch') {
+          this.clearCache()
+          this.addButtonToPlayer()
+        }
+      }, 250)
+    )
 
+    this.addObserver(observer)
     observer.observe(document.querySelector('title'), {
       subtree: true,
       characterData: true,
       childList: true,
     })
   }
+
+  debounce(func, wait) {
+    clearTimeout(this.debounceTimeout)
+    this.debounceTimeout = setTimeout(func, wait)
+  }
+
+  showSuccess() {
+    this.button.textContent = '✓ Copied!'
+    setTimeout(() => {
+      this.button.textContent = 'Copy Transcript'
+    }, 2000)
+  }
+
+  showError() {
+    this.button.textContent = '⚠️ Failed'
+    this.button.style.backgroundColor = '#ff4444'
+    setTimeout(() => {
+      this.button.textContent = 'Copy Transcript'
+      this.button.style.backgroundColor = ''
+    }, 2000)
+  }
+
+  // Cleanup method
+  destroy() {
+    this.observers.forEach((observer) => observer.disconnect())
+    this.observers.clear()
+    this.button?.remove()
+    this.clearCache()
+  }
+
+  addObserver(observer) {
+    this.observers.add(observer)
+  }
 }
 
 // Initialize the copier when the page is loaded
+let instance = null
+
 function initializeExtension() {
+  if (instance) {
+    instance.destroy()
+  }
+
   if (document.querySelector('#movie_player')) {
-    new YouTubeTranscriptCopier()
+    instance = new YouTubeTranscriptCopier()
   } else {
     setTimeout(initializeExtension, 1000)
   }
